@@ -9,27 +9,27 @@
 body { font-family: -apple-system, sans-serif; background: #6B21A8; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 .card { background: white; border-radius: 24px; padding: 40px 28px; max-width: 320px; width: 90%; text-align: center; }
 .logo { font-size: 20px; font-weight: 900; color: #6B21A8; margin-bottom: 20px; }
-.icon { font-size: 56px; margin-bottom: 16px; }
-.title { font-size: 20px; font-weight: 800; color: #1F2937; margin-bottom: 8px; }
-.msg { font-size: 14px; color: #6B7280; margin-bottom: 28px; line-height: 1.5; }
-.btn { display: block; background: #6B21A8; color: white; text-decoration: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700; }
-.spin { width: 24px; height: 24px; border: 3px solid #E9D5FF; border-top-color: #6B21A8; border-radius: 50%; animation: sp 0.8s linear infinite; margin: 0 auto 16px; }
-@keyframes sp { to { transform: rotate(360deg); } }
+.icon { font-size: 64px; margin-bottom: 16px; }
+.title { font-size: 22px; font-weight: 800; color: #1F2937; margin-bottom: 10px; }
+.msg { font-size: 14px; color: #6B7280; margin-bottom: 12px; line-height: 1.6; }
+.steps { background: #F3E8FF; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; }
+.step { font-size: 14px; color: #6B21A8; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.step:last-child { margin-bottom: 0; }
+.close-btn { background: #6B21A8; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">nospi</div>
   <div class="icon">&#x2705;</div>
-  <div class="title">&#xa1;Pago recibido!</div>
-  <div class="msg">Volviendo a la app...</div>
-  <div class="spin"></div>
-  <a href="nospi://payment/success" class="btn">Abrir Nospi</a>
+  <div class="title">&#xa1;Pago confirmado!</div>
+  <div class="msg">Tu asistencia al evento ha sido registrada exitosamente.</div>
+  <div class="steps">
+    <div class="step">1&#xFE0F;&#x20E3; Cierra este browser</div>
+    <div class="step">2&#xFE0F;&#x20E3; Vuelve a la app Nospi</div>
+    <div class="step">3&#xFE0F;&#x20E3; Ve a la pestana Citas</div>
+  </div>
+  <button class="close-btn" onclick="window.close()">Cerrar y volver a Nospi</button>
 </div>
-<script>
-  setTimeout(function() {
-    window.location.href = 'nospi://payment/success';
-  }, 800);
-</script>
 </body>
 </html>
