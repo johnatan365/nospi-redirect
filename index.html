@@ -1,35 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nospi - Pago exitoso</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, sans-serif; background: #6B21A8; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.card { background: white; border-radius: 24px; padding: 40px 28px; max-width: 320px; width: 90%; text-align: center; }
-.logo { font-size: 20px; font-weight: 900; color: #6B21A8; margin-bottom: 20px; }
-.icon { font-size: 64px; margin-bottom: 16px; }
-.title { font-size: 22px; font-weight: 800; color: #1F2937; margin-bottom: 10px; }
-.msg { font-size: 14px; color: #6B7280; margin-bottom: 12px; line-height: 1.6; }
-.steps { background: #F3E8FF; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; }
-.step { font-size: 14px; color: #6B21A8; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-.step:last-child { margin-bottom: 0; }
-.close-btn { background: #6B21A8; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nospi — Redirigiendo...</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #6B21A8, #9333EA);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { font-size: 24px; font-weight: 800; color: #6B21A8; margin-bottom: 8px; }
+    p { font-size: 15px; color: #666; line-height: 1.5; margin-bottom: 24px; }
+    .btn {
+      display: block;
+      background: #6B21A8;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 16px 24px;
+      border-radius: 14px;
+      text-decoration: none;
+      margin-bottom: 12px;
+      cursor: pointer;
+      border: none;
+      width: 100%;
+    }
+    .spin {
+      width: 28px; height: 28px;
+      border: 3px solid #E9D5FF;
+      border-top-color: #6B21A8;
+      border-radius: 50%;
+      animation: sp 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    .status { font-size: 13px; color: #999; margin-top: 8px; }
+  </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">nospi</div>
-  <div class="icon">&#x2705;</div>
-  <div class="title">&#xa1;Pago confirmado!</div>
-  <div class="msg">Tu asistencia al evento ha sido registrada exitosamente.</div>
-  <div class="steps">
-    <div class="step">1&#xFE0F;&#x20E3; Cierra este browser</div>
-    <div class="step">2&#xFE0F;&#x20E3; Vuelve a la app Nospi</div>
-    <div class="step">3&#xFE0F;&#x20E3; Ve a la pestana Citas</div>
+  <div class="card">
+    <div class="icon" id="icon">✅</div>
+    <h1 id="title">¡Pago exitoso!</h1>
+    <p id="msg">Tu asistencia al evento ha sido confirmada. Volviendo a Nospi...</p>
+    <div class="spin" id="spin"></div>
+    <button class="btn" id="btn" onclick="openApp()" style="display:none">Abrir Nospi</button>
+    <div class="status" id="status">Abriendo la app...</div>
   </div>
-  <button class="close-btn" onclick="window.close()">Cerrar y volver a Nospi</button>
-</div>
+
+  <script>
+    // Detectar estado del pago desde query params de MercadoPago
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('collection_status') || params.get('status') || 'approved';
+    const path = window.location.pathname;
+
+    if (status === 'rejected' || status === 'cancelled' || path.includes('failure')) {
+      document.getElementById('icon').textContent = '❌';
+      document.getElementById('title').textContent = 'Pago no completado';
+      document.getElementById('msg').textContent = 'No se pudo procesar el pago. Volviendo a Nospi...';
+    } else if (status === 'pending' || status === 'in_process' || path.includes('pending')) {
+      document.getElementById('icon').textContent = '⏳';
+      document.getElementById('title').textContent = 'Pago en proceso';
+      document.getElementById('msg').textContent = 'Tu pago está siendo procesado. Te notificaremos pronto.';
+    }
+
+    // Deep link a abrir
+    var deepLink = 'nospi://payment/' + (
+      (status === 'approved' || status === 'accredited') ? 'success' :
+      (status === 'pending' || status === 'in_process') ? 'pending' : 'failure'
+    );
+
+    function openApp() {
+      window.location.href = deepLink;
+    }
+
+    // Intentar abrir la app automáticamente
+    function tryOpenApp() {
+      // Intentar abrir el deep link
+      window.location.href = deepLink;
+
+      // Si después de 2.5s seguimos aquí, mostrar botón manual
+      setTimeout(function() {
+        document.getElementById('spin').style.display = 'none';
+        document.getElementById('btn').style.display = 'block';
+        document.getElementById('status').textContent = 'Si la app no abrió automáticamente, toca el botón.';
+      }, 2500);
+    }
+
+    // Esperar 1 segundo antes de intentar abrir (para que iOS procese)
+    setTimeout(tryOpenApp, 1000);
+  </script>
 </body>
 </html>
