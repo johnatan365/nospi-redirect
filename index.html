@@ -1,100 +1,149 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nospi — Redirigiendo...</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #6B21A8, #9333EA);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .card {
-      background: white;
-      border-radius: 24px;
-      padding: 40px 32px;
-      text-align: center;
-      max-width: 360px;
-      width: 100%;
-    }
-    .icon { font-size: 64px; margin-bottom: 16px; }
-    h1 { font-size: 22px; font-weight: 800; color: #6B21A8; margin-bottom: 8px; }
-    p { font-size: 15px; color: #666; margin-bottom: 28px; }
-    .btn {
-      display: block;
-      background: #6B21A8;
-      color: white;
-      font-size: 17px;
-      font-weight: 700;
-      padding: 18px 24px;
-      border-radius: 14px;
-      text-decoration: none;
-      width: 100%;
-      cursor: pointer;
-      border: none;
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon" id="icon">⏳</div>
-    <h1 id="title">Redirigiendo...</h1>
-    <p id="msg">Volviendo a Nospi</p>
-    <button id="btn" class="btn" style="display:none">Volver a Nospi</button>
-  </div>
-  <script>
-    // Wompi envía estos parámetros en la URL de retorno:
-    // ?id=xxx&transaction_id=xxx&collection_status=approved&status=approved
-    var params = new URLSearchParams(window.location.search);
-    
-    // Capturar transactionId — Wompi lo manda como 'id' o 'transaction_id'
-    var transactionId = params.get('id') || params.get('transaction_id') || '';
-    
-    // Capturar status
-    var collectionStatus = params.get('collection_status') || params.get('status') || '';
-    var path = window.location.pathname;
-    
-    var paymentStatus = 'success';
-    if (collectionStatus === 'rejected' || collectionStatus === 'cancelled' || 
-        collectionStatus === 'declined' || path.includes('failure')) {
-      paymentStatus = 'failure';
-      document.getElementById('icon').textContent = '❌';
-      document.getElementById('title').textContent = 'Pago no completado';
-      document.getElementById('msg').textContent = 'No se pudo procesar el pago.';
-    } else if (collectionStatus === 'pending' || collectionStatus === 'in_process' || path.includes('pending')) {
-      paymentStatus = 'pending';
-      document.getElementById('icon').textContent = '⏳';
-      document.getElementById('title').textContent = 'Pago en proceso';
-      document.getElementById('msg').textContent = 'Tu pago está siendo procesado.';
-    } else {
-      document.getElementById('icon').textContent = '✅';
-      document.getElementById('title').textContent = '¡Pago exitoso!';
-      document.getElementById('msg').textContent = 'Volviendo a Nospi...';
-    }
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, StyleSheet, Alert, Platform } from 'react-native';
+import { useSupabase } from '@/contexts/SupabaseContext';
+import { nospiColors } from '@/constants/Colors';
+import { supabase } from '@/lib/supabase';
 
-    // Construir URL de regreso con transactionId
-    var returnUrl = 'https://nospi.vercel.app/subscription-plans?payment_status=' + paymentStatus;
-    if (transactionId) {
-      returnUrl += '&transaction_id=' + transactionId;
-    }
+export default function Index() {
+  const router = useRouter();
+  const { user, loading } = useSupabase();
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
 
-    document.getElementById('btn').href = returnUrl;
-    document.getElementById('btn').style.display = 'block';
-    document.getElementById('btn').addEventListener('click', function(e) {
-      e.preventDefault();
-      window.location.href = returnUrl;
-    });
+  useEffect(() => {
+    console.log('Index: Checking auth state - loading:', loading, 'user:', user?.id);
+    
+    const checkProfileAndNavigate = async () => {
+      if (!loading) {
+        if (user) {
+          console.log('Index: User authenticated, checking profile existence');
+          setIsCheckingProfile(true);
+          
+          try {
+            // Check if user profile exists in users table
+            const { data: profile, error: profileError } = await supabase
+              .from('users')
+              .select('id, name, email')
+              .eq('id', user.id)
+              .maybeSingle();
 
-    // Auto-redirect después de 800ms
-    setTimeout(function() {
-      window.location.href = returnUrl;
-    }, 800);
-  </script>
-</body>
-</html>
+            if (profileError && profileError.code !== 'PGRST116') {
+              console.error('Index: Error checking profile:', profileError);
+              
+              if (Platform.OS === 'web') {
+                window.alert('Error al verificar tu perfil. Por favor, intenta de nuevo.');
+              } else {
+                Alert.alert('Error', 'Error al verificar tu perfil. Por favor, intenta de nuevo.');
+              }
+              
+              await supabase.auth.signOut();
+              router.replace('/welcome');
+              return;
+            }
+
+            if (!profile) {
+              // User authenticated via Google but no profile in users table
+              console.log('Index: Google user authenticated but no profile found. Signing out.');
+              await supabase.auth.signOut();
+              
+              if (Platform.OS === 'web') {
+                const shouldRegister = window.confirm(
+                  'Debes registrarte primero en la aplicación antes de iniciar sesión con Google.\n\n¿Ir a registro?'
+                );
+                if (shouldRegister) {
+                  router.replace('/onboarding/register');
+                } else {
+                  router.replace('/welcome');
+                }
+              } else {
+                Alert.alert(
+                  'Registro Requerido',
+                  'Debes registrarte primero en la aplicación antes de iniciar sesión con Google.',
+                  [{ text: 'OK', onPress: () => router.replace('/onboarding/register') }]
+                );
+              }
+              return;
+            }
+
+            console.log('Index: Profile exists, checking for pending payment...');
+
+            // Verificar si hay pago pendiente de Bancolombia/PSE
+            // En web: revisar URL params
+            // En nativo: revisar AsyncStorage
+            let hasPendingPayment = false;
+            let paymentStatus = '';
+            let transactionId = '';
+
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+              const urlParams = new URLSearchParams(window.location.search);
+              paymentStatus = urlParams.get('payment_status') || '';
+              transactionId = urlParams.get('transaction_id') || '';
+              if (paymentStatus) hasPendingPayment = true;
+            }
+
+            if (!hasPendingPayment) {
+              const pending = await AsyncStorage.getItem('pse_payment_pending');
+              if (pending === 'true') hasPendingPayment = true;
+            }
+
+            if (hasPendingPayment) {
+              console.log('Index: Pending payment detected, redirecting to subscription-plans');
+              let target = '/subscription-plans';
+              if (paymentStatus) {
+                target += '?payment_status=' + paymentStatus;
+                if (transactionId) target += '&transaction_id=' + transactionId;
+              }
+              router.replace(target as any);
+            } else {
+              console.log('Index: No pending payment, redirecting to events');
+              router.replace('/(tabs)/events');
+            }
+          } catch (error) {
+            console.error('Index: Unexpected error during profile check:', error);
+            
+            if (Platform.OS === 'web') {
+              window.alert('Ocurrió un error inesperado. Por favor, intenta de nuevo.');
+            } else {
+              Alert.alert('Error', 'Ocurrió un error inesperado. Por favor, intenta de nuevo.');
+            }
+            
+            await supabase.auth.signOut();
+            router.replace('/welcome');
+          } finally {
+            setIsCheckingProfile(false);
+            setInitialCheckDone(true);
+          }
+        } else {
+          console.log('Index: No user, redirecting to welcome');
+          setInitialCheckDone(true);
+          router.replace('/welcome');
+        }
+      }
+    };
+
+    checkProfileAndNavigate();
+  }, [loading, user, router]);
+
+  // Show loading while checking auth state or profile
+  if (!initialCheckDone || isCheckingProfile) {
+    console.log('Index: Showing loading indicator');
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={nospiColors.purpleDark} />
+      </View>
+    );
+  }
+
+  return null;
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+});
