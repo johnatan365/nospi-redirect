@@ -38,6 +38,7 @@
       text-decoration: none;
       width: 100%;
       -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
     }
     .btn:active { background: #581C87; }
     .hint { font-size: 12px; color: #aaa; margin-top: 14px; line-height: 1.5; }
@@ -48,30 +49,47 @@
     <div class="icon" id="icon">✅</div>
     <h1 id="title">¡Pago exitoso!</h1>
     <p id="msg">Tu asistencia al evento ha sido confirmada.</p>
-    <a id="btn" href="nospi://payment/success" class="btn">Volver a Nospi</a>
+    <a id="btn" href="#" class="btn">Volver a Nospi</a>
     <p class="hint">Toca el botón para volver a la app</p>
   </div>
-
   <script>
     var params = new URLSearchParams(window.location.search);
     var status = params.get('collection_status') || params.get('status') || 'approved';
     var path = window.location.pathname;
 
-    var deepLink = 'nospi://payment/success';
-
+    var paymentStatus = 'success';
     if (status === 'rejected' || status === 'cancelled' || path.includes('failure')) {
       document.getElementById('icon').textContent = '❌';
       document.getElementById('title').textContent = 'Pago no completado';
       document.getElementById('msg').textContent = 'No se pudo procesar el pago. Vuelve a Nospi e intenta de nuevo.';
-      deepLink = 'nospi://payment/failure';
+      paymentStatus = 'failure';
     } else if (status === 'pending' || status === 'in_process' || path.includes('pending')) {
       document.getElementById('icon').textContent = '⏳';
       document.getElementById('title').textContent = 'Pago en proceso';
       document.getElementById('msg').textContent = 'Tu pago está siendo procesado. Te avisaremos cuando se confirme.';
-      deepLink = 'nospi://payment/pending';
+      paymentStatus = 'pending';
     }
 
-    document.getElementById('btn').href = deepLink;
+    var webUrl = 'https://nospi.vercel.app/subscription-plans?payment_status=' + paymentStatus;
+    var nativeUrl = 'nospi://payment/' + paymentStatus;
+
+    document.getElementById('btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      // Try native deep link first, fallback to web after 1s
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = nativeUrl;
+      document.body.appendChild(iframe);
+      setTimeout(function() {
+        try { document.body.removeChild(iframe); } catch(e) {}
+        window.location.href = webUrl;
+      }, 1000);
+    });
+
+    // Auto-redirect to web after 2.5s
+    setTimeout(function() {
+      window.location.href = webUrl;
+    }, 2500);
   </script>
 </body>
 </html>
