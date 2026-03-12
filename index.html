@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nospi — Pago</title>
+  <title>Nospi — Redirigiendo...</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -22,11 +22,10 @@
       text-align: center;
       max-width: 360px;
       width: 100%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
     .icon { font-size: 64px; margin-bottom: 16px; }
-    h1 { font-size: 24px; font-weight: 800; color: #6B21A8; margin-bottom: 8px; }
-    p { font-size: 15px; color: #666; line-height: 1.5; margin-bottom: 28px; }
+    h1 { font-size: 22px; font-weight: 800; color: #6B21A8; margin-bottom: 8px; }
+    p { font-size: 15px; color: #666; margin-bottom: 28px; }
     .btn {
       display: block;
       background: #6B21A8;
@@ -40,49 +39,62 @@
       cursor: pointer;
       border: none;
     }
-    .btn:active { background: #581C87; }
-    .hint { font-size: 12px; color: #aaa; margin-top: 14px; line-height: 1.5; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="icon" id="icon">✅</div>
-    <h1 id="title">¡Pago exitoso!</h1>
-    <p id="msg">Tu asistencia al evento ha sido confirmada.</p>
-    <button id="btn" class="btn">Volver a Nospi</button>
-    <p class="hint">Toca el botón para volver a la app</p>
+    <div class="icon" id="icon">⏳</div>
+    <h1 id="title">Redirigiendo...</h1>
+    <p id="msg">Volviendo a Nospi</p>
+    <button id="btn" class="btn" style="display:none">Volver a Nospi</button>
   </div>
   <script>
+    // Wompi envía estos parámetros en la URL de retorno:
+    // ?id=xxx&transaction_id=xxx&collection_status=approved&status=approved
     var params = new URLSearchParams(window.location.search);
-    var status = params.get('collection_status') || params.get('status') || 'approved';
+    
+    // Capturar transactionId — Wompi lo manda como 'id' o 'transaction_id'
     var transactionId = params.get('id') || params.get('transaction_id') || '';
+    
+    // Capturar status
+    var collectionStatus = params.get('collection_status') || params.get('status') || '';
     var path = window.location.pathname;
-
+    
     var paymentStatus = 'success';
-    if (status === 'rejected' || status === 'cancelled' || path.includes('failure')) {
+    if (collectionStatus === 'rejected' || collectionStatus === 'cancelled' || 
+        collectionStatus === 'declined' || path.includes('failure')) {
+      paymentStatus = 'failure';
       document.getElementById('icon').textContent = '❌';
       document.getElementById('title').textContent = 'Pago no completado';
-      document.getElementById('msg').textContent = 'No se pudo procesar el pago. Vuelve a Nospi e intenta de nuevo.';
-      paymentStatus = 'failure';
-    } else if (status === 'pending' || status === 'in_process' || path.includes('pending')) {
+      document.getElementById('msg').textContent = 'No se pudo procesar el pago.';
+    } else if (collectionStatus === 'pending' || collectionStatus === 'in_process' || path.includes('pending')) {
+      paymentStatus = 'pending';
       document.getElementById('icon').textContent = '⏳';
       document.getElementById('title').textContent = 'Pago en proceso';
       document.getElementById('msg').textContent = 'Tu pago está siendo procesado.';
-      paymentStatus = 'pending';
+    } else {
+      document.getElementById('icon').textContent = '✅';
+      document.getElementById('title').textContent = '¡Pago exitoso!';
+      document.getElementById('msg').textContent = 'Volviendo a Nospi...';
     }
 
-    // Build return URL with transactionId
-    var webUrl = 'https://nospi.vercel.app/subscription-plans?payment_status=' + paymentStatus;
-    if (transactionId) webUrl += '&transaction_id=' + transactionId;
+    // Construir URL de regreso con transactionId
+    var returnUrl = 'https://nospi.vercel.app/subscription-plans?payment_status=' + paymentStatus;
+    if (transactionId) {
+      returnUrl += '&transaction_id=' + transactionId;
+    }
 
-    document.getElementById('btn').addEventListener('click', function() {
-      window.location.href = webUrl;
+    document.getElementById('btn').href = returnUrl;
+    document.getElementById('btn').style.display = 'block';
+    document.getElementById('btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      window.location.href = returnUrl;
     });
 
-    // Auto-redirect after 500ms
+    // Auto-redirect después de 800ms
     setTimeout(function() {
-      window.location.href = webUrl;
-    }, 500);
+      window.location.href = returnUrl;
+    }, 800);
   </script>
 </body>
 </html>
