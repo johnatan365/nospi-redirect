@@ -37,8 +37,8 @@
       border-radius: 14px;
       text-decoration: none;
       width: 100%;
-      -webkit-tap-highlight-color: transparent;
       cursor: pointer;
+      border: none;
     }
     .btn:active { background: #581C87; }
     .hint { font-size: 12px; color: #aaa; margin-top: 14px; line-height: 1.5; }
@@ -49,12 +49,13 @@
     <div class="icon" id="icon">✅</div>
     <h1 id="title">¡Pago exitoso!</h1>
     <p id="msg">Tu asistencia al evento ha sido confirmada.</p>
-    <a id="btn" href="#" class="btn">Volver a Nospi</a>
+    <button id="btn" class="btn">Volver a Nospi</button>
     <p class="hint">Toca el botón para volver a la app</p>
   </div>
   <script>
     var params = new URLSearchParams(window.location.search);
     var status = params.get('collection_status') || params.get('status') || 'approved';
+    var transactionId = params.get('id') || params.get('transaction_id') || '';
     var path = window.location.pathname;
 
     var paymentStatus = 'success';
@@ -66,27 +67,19 @@
     } else if (status === 'pending' || status === 'in_process' || path.includes('pending')) {
       document.getElementById('icon').textContent = '⏳';
       document.getElementById('title').textContent = 'Pago en proceso';
-      document.getElementById('msg').textContent = 'Tu pago está siendo procesado. Te avisaremos cuando se confirme.';
+      document.getElementById('msg').textContent = 'Tu pago está siendo procesado.';
       paymentStatus = 'pending';
     }
 
+    // Build return URL with transactionId
     var webUrl = 'https://nospi.vercel.app/subscription-plans?payment_status=' + paymentStatus;
-    var nativeUrl = 'nospi://payment/' + paymentStatus;
+    if (transactionId) webUrl += '&transaction_id=' + transactionId;
 
-    document.getElementById('btn').addEventListener('click', function(e) {
-      e.preventDefault();
-      // Try native deep link first, fallback to web after 1s
-      var iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = nativeUrl;
-      document.body.appendChild(iframe);
-      setTimeout(function() {
-        try { document.body.removeChild(iframe); } catch(e) {}
-        window.location.href = webUrl;
-      }, 300);
+    document.getElementById('btn').addEventListener('click', function() {
+      window.location.href = webUrl;
     });
 
-    // Auto-redirect to web after 2.5s
+    // Auto-redirect after 500ms
     setTimeout(function() {
       window.location.href = webUrl;
     }, 500);
