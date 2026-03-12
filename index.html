@@ -83,13 +83,13 @@
       setTimeout(function() {
         try { document.body.removeChild(iframe); } catch(e) {}
         window.location.href = webUrl;
-      }, 1000);
+      }, 300);
     });
 
     // Auto-redirect to web after 2.5s
     setTimeout(function() {
       window.location.href = webUrl;
-    }, 2500);
+    }, 500);
   </script>
 </body>
 </html>
